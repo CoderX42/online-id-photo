@@ -1,13 +1,32 @@
 import { NextResponse } from 'next/server'
-import { createNativeOrder, queryOrder, codeUrlToQrImage } from '@/lib/payment/wechat'
+import QRCode from 'qrcode'
+import { createNativeOrder, queryOrder, closeOrder } from '@/lib/payment/wechat'
 
-const orders = new Map<string, { amount: number; status: 'pending' | 'paid'; createdAt: number }>()
+const PAY_TIMEOUT_MS = 5 * 60 * 1000 // 5 分钟过期
 
-function generateOrderId(): string {
-  return `ZJ${Date.now()}${Math.random().toString(36).slice(2, 8)}`.toUpperCase()
+const orders = new Map<string, {
+  amount: number
+  status: 'pending' | 'paid' | 'expired'
+  codeUrl: string | null
+  createdAt: number
+}>()
+
+function gid(): string {
+  return `ZJ${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`.toUpperCase()
 }
 
-/** POST /api/pay — 创建微信支付订单 */
+/** 清理过期订单 */
+function cleanExpired() {
+  const now = Date.now()
+  for (const [id, o] of orders) {
+    if (o.status === 'pending' && now - o.createdAt > PAY_TIMEOUT_MS) {
+      o.status = 'expired'
+      if (o.codeUrl) closeOrder(id).catch(() => {})
+    }
+  }
+}
+
+/** POST /api/pay — 创建支付订单，返回二维码 SVG */
 export async function POST(request: Request) {
   try {
     const { amount } = await request.json()
@@ -15,58 +34,67 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '金额无效' }, { status: 400 })
     }
 
-    const orderId = generateOrderId()
-    orders.set(orderId, { amount, status: 'pending', createdAt: Date.now() })
+    cleanExpired()
+    const orderId = gid()
 
-    // 尝试微信支付，失败降级到手动模式
-    let payUrl: string
+    // 尝试微信支付
+    let qrSvg: string | null = null
+    let wxOk = false
     try {
-      const { codeUrl } = await createNativeOrder({
-        outTradeNo: orderId,
-        amount,
-        description: '证件照下载',
+      const codeUrl = await createNativeOrder(orderId, amount, '证件照下载')
+      qrSvg = await QRCode.toString(codeUrl, {
+        type: 'svg',
+        width: 200,
+        margin: 2,
+        color: { dark: '#3d2b1f', light: '#ffffff' },
       })
-      // 将微信 code_url 转为二维码图片
-      payUrl = codeUrlToQrImage(codeUrl)
-    } catch (wxError) {
-      console.warn('微信支付创建订单失败，降级手动模式:', wxError)
-      payUrl = 'manual'
+      wxOk = true
+    } catch (e) {
+      console.warn('微信支付创建失败，降级手动模式:', e)
     }
 
-    return NextResponse.json({ orderId, amount, payUrl })
+    orders.set(orderId, {
+      amount,
+      status: 'pending',
+      codeUrl: wxOk ? 'wechat' : null,
+      createdAt: Date.now(),
+    })
+
+    return NextResponse.json({
+      orderId,
+      amount,
+      qrSvg,        // null = 手动模式（显示静态收款码）
+      wxConfigured: wxOk,
+    })
   } catch (error) {
     console.error('创建订单失败:', error)
     return NextResponse.json({ error: '创建订单失败' }, { status: 500 })
   }
 }
 
-/** GET /api/pay?id=xxx — 查询订单状态 */
+/** GET /api/pay?id=xxx — 查询支付状态 */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const orderId = searchParams.get('id')
-
-  if (!orderId) {
-    return NextResponse.json({ error: '缺少订单ID' }, { status: 400 })
-  }
+  if (!orderId) return NextResponse.json({ error: '缺少订单ID' }, { status: 400 })
 
   const order = orders.get(orderId)
-  if (!order) {
-    return NextResponse.json({ error: '订单不存在' }, { status: 404 })
+  if (!order) return NextResponse.json({ error: '订单不存在' }, { status: 404 })
+
+  // 检查过期
+  if (order.status === 'pending' && Date.now() - order.createdAt > PAY_TIMEOUT_MS) {
+    order.status = 'expired'
+    if (order.codeUrl) closeOrder(orderId).catch(() => {})
+    return NextResponse.json({ orderId, status: 'expired', amount: order.amount })
   }
 
-  // 向微信查询最新状态
-  if (order.status === 'pending') {
+  // 向微信查询
+  if (order.status === 'pending' && order.codeUrl) {
     try {
-      const wxStatus = await queryOrder(orderId)
-      if (wxStatus === 'paid') {
-        order.status = 'paid'
-        orders.set(orderId, order)
-      } else if (wxStatus === 'closed') {
-        return NextResponse.json({ orderId, status: 'expired', amount: order.amount })
-      }
-    } catch {
-      // 微信查询失败时保持 pending 状态，让前端继续轮询
-    }
+      const s = await queryOrder(orderId)
+      if (s === 'paid') order.status = 'paid'
+      else if (s === 'closed') order.status = 'expired'
+    } catch { /* 查询失败保持 pending */ }
   }
 
   return NextResponse.json({ orderId, status: order.status, amount: order.amount })

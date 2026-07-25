@@ -305,10 +305,12 @@ export default function StudioPage() {
                   <button
                   type="button"
                   className="compare-toggle"
-                  onPointerDown={() => setShowOriginal(true)}
+                  onPointerDown={(e) => {
+                    (e.target as HTMLElement).setPointerCapture(e.pointerId)
+                    setShowOriginal(true)
+                  }}
                   onPointerUp={() => setShowOriginal(false)}
                   onPointerCancel={() => setShowOriginal(false)}
-                  onPointerLeave={() => setShowOriginal(false)}
                   >
                     按住对比原图
                   </button>
@@ -454,7 +456,7 @@ export default function StudioPage() {
                   >
                     <div className="adjust-row">
                       <span className="adjust-label"><Maximize2 size={13} /> 缩放</span>
-                      <input type="range" min={0.72} max={1.5} step={0.01} value={scale} onChange={(e) => setScale(Number(e.target.value))} />
+                      <input type="range" min={0.3} max={1.5} step={0.01} value={scale} onChange={(e) => setScale(Number(e.target.value))} />
                       <b>{Math.round(scale * 100)}%</b>
                     </div>
                     <div className="adjust-row">

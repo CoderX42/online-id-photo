@@ -1,6 +1,14 @@
+'use client'
+
+import { usePathname } from 'next/navigation'
 import { LockKeyhole } from 'lucide-react'
 
 export default function Footer() {
+  const pathname = usePathname()
+
+  // Hide on studio page — it's a fullscreen immersive workspace
+  if (pathname === '/studio') return null
+
   return (
     <footer className="border-t border-[var(--border)] bg-[var(--cream)]">
       <div className="max-w-[1340px] mx-auto py-10 px-5 lg:px-8 flex flex-col sm:flex-row items-center gap-4 text-[13px] text-[var(--ink-muted)]">
