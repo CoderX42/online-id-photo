@@ -1,25 +1,38 @@
 {
-  "name": "online-id-photo",
+  "name": "zhaojian",
   "private": true,
-  "version": "1.0.0",
+  "version": "2.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --host 0.0.0.0",
-    "build": "tsc -b && vite build",
-    "preview": "vite preview --host 0.0.0.0",
+    "dev": "rm -rf .next && next dev --turbo",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "sync:model": "node scripts/sync-background-model.mjs"
   },
   "dependencies": {
     "@imgly/background-removal": "^1.7.0",
+    "@next/swc-darwin-arm64": "^16.2.11",
+    "clsx": "^2.1.1",
+    "jszip": "^3.10.1",
     "lucide-react": "^0.468.0",
+    "next": "^15.1.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "zustand": "^5.0.0"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^7.0.0",
+    "@testing-library/react": "^16.3.2",
+    "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.5.4",
+    "tailwindcss": "^3.4.19",
     "typescript": "~5.7.2",
-    "vite": "^6.0.5"
+    "vitest": "^4.1.10"
   }
 }

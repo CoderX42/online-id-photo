@@ -3,9 +3,10 @@ node_modules/
 
 # Build
 dist/
+.next/
 *.tsbuildinfo
 
-# Vite
+# Vite (legacy)
 .vite/
 
 # Env / secrets
@@ -24,3 +25,8 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+
+# Legacy
+legacy/node_modules/
+legacy/.vite/
+legacy/dist/

@@ -7,6 +7,8 @@ const remoteBase = `https://staticimgly.com/@imgly/background-removal-data/${ver
 const outputDir = join(process.cwd(), 'public', 'background-removal')
 const requiredResources = [
   '/models/isnet_fp16',
+  '/onnxruntime-web/ort-wasm-simd-threaded.jsep.wasm',
+  '/onnxruntime-web/ort-wasm-simd-threaded.jsep.mjs',
   '/onnxruntime-web/ort-wasm-simd-threaded.wasm',
   '/onnxruntime-web/ort-wasm-simd-threaded.mjs',
 ]
