@@ -1,10 +1,10 @@
 import Link from 'next/link'
-import { ArrowRight, Check, LockKeyhole, Star } from 'lucide-react'
+import { ArrowRight, Camera, Check, FileImage, LockKeyhole, Sparkles, Star } from 'lucide-react'
 
 const Steps = [
-  { step: '01', icon: '📷', title: '拍一张正面照', desc: '手机后置摄像头，靠窗自然光拍一张上半身正面照。', accent: 'var(--terracotta)', bg: 'var(--terracotta-light)' },
-  { step: '02', icon: '✨', title: 'AI 自动处理', desc: '浏览器本地运行人像模型，去背景换底色，照片绝不上传。', accent: 'var(--olive)', bg: 'var(--olive-light)' },
-  { step: '03', icon: '📦', title: '下载冲印', desc: '选尺寸、微调位置，一键下载高清照或排版相纸。', accent: 'var(--golden)', bg: 'var(--golden-light)' },
+  { step: '01', icon: Camera, title: '拍一张正面照', desc: '手机后置摄像头，靠窗自然光拍一张上半身正面照。', accent: 'var(--terracotta)', bg: 'var(--terracotta-light)' },
+  { step: '02', icon: Sparkles, title: 'AI 自动处理', desc: '浏览器本地运行人像模型，去背景换底色，照片绝不上传。', accent: 'var(--olive)', bg: 'var(--olive-light)' },
+  { step: '03', icon: FileImage, title: '下载冲印', desc: '选尺寸、微调位置，一键下载高清照或排版相纸。', accent: 'var(--golden)', bg: 'var(--golden-light)' },
 ]
 
 export default function HomePage() {
@@ -82,7 +82,7 @@ export default function HomePage() {
         </div>
 
         <div className="grid sm:grid-cols-3 gap-4 lg:gap-5">
-          {Steps.map(({ step, icon, title, desc, accent, bg }, i) => (
+          {Steps.map(({ step, icon: Icon, title, desc, accent, bg }, i) => (
             <div
               key={step}
               className="group relative rounded-2xl p-7 border border-[var(--border)] shadow-[var(--shadow-sm)] hover:shadow-[var(--shadow-md)] hover:-translate-y-1 transition-all duration-300"
@@ -97,7 +97,7 @@ export default function HomePage() {
               <span className="relative text-[9px] font-bold font-['Oswald',sans-serif] tracking-[0.2em] opacity-40" style={{ color: accent }}>
                 STEP {step}
               </span>
-              <div className="relative mt-3 text-4xl">{icon}</div>
+              <div className="relative mt-3"><Icon size={34} strokeWidth={1.8} style={{ color: accent }} aria-hidden="true" /></div>
               <h3 className="relative mt-3 text-lg font-bold">{title}</h3>
               <p className="relative mt-2 text-[14px] text-[var(--ink-muted)] leading-relaxed">{desc}</p>
             </div>

@@ -48,19 +48,37 @@ async function request(method: string, path: string, body: object | null, cfg: C
 }
 
 /** 创建 Native 支付订单 → 返回 code_url（微信扫码链接） */
-export async function createNativeOrder(outTradeNo: string, amountYuan: number, description: string): Promise<string> {
+export async function createNativeOrder(outTradeNo: string, amountCents: number, description: string): Promise<string> {
   const cfg = loadConfig()
   const body = {
     appid: cfg.appid,
     mchid: cfg.mchid,
     description,
     out_trade_no: outTradeNo,
-    notify_url: '',
-    amount: { total: Math.round(amountYuan * 100), currency: 'CNY' },
+    notify_url: process.env.WECHAT_NOTIFY_URL || `${process.env.NEXT_PUBLIC_SITE_URL || ''}/api/pay/webhook`,
+    amount: { total: amountCents, currency: 'CNY' },
   }
   const data = await request('POST', '/v3/pay/transactions/native', body, cfg)
   if (!data.code_url) throw new Error('微信未返回 code_url')
   return data.code_url
+}
+
+export function verifyWechatSignature(message: string, signature: string) {
+  const publicKey = process.env.WECHAT_PLATFORM_PUBLIC_KEY?.replace(/\\n/g, '\n')
+  if (!publicKey) throw new Error('WECHAT_PLATFORM_PUBLIC_KEY 未配置')
+  return crypto.createVerify('RSA-SHA256').update(message).verify(publicKey, signature, 'base64')
+}
+
+export function decryptWechatResource(resource: { ciphertext: string; nonce: string; associated_data: string }) {
+  const key = Buffer.from(process.env.WECHAT_API_V3_KEY || '', 'utf8')
+  if (key.length !== 32) throw new Error('WECHAT_API_V3_KEY 必须是 32 字节')
+  const ciphertext = Buffer.from(resource.ciphertext, 'base64')
+  const authTag = ciphertext.subarray(ciphertext.length - 16)
+  const data = ciphertext.subarray(0, ciphertext.length - 16)
+  const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(resource.nonce, 'utf8'))
+  decipher.setAuthTag(authTag)
+  decipher.setAAD(Buffer.from(resource.associated_data, 'utf8'))
+  return Buffer.concat([decipher.update(data), decipher.final()]).toString('utf8')
 }
 
 /** 关闭未支付订单 */

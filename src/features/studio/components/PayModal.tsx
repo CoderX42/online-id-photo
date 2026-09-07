@@ -25,7 +25,7 @@ export default function PayModal({ open, onClose, onPaid }: PayModalProps) {
     if (pollRef.current) clearInterval(pollRef.current)
     pollRef.current = setInterval(async () => {
       try {
-        const res = await fetch(`/api/pay?id=${id}`)
+        const res = await fetch(`/api/pay/orders/${id}`)
         const data = await res.json()
         if (data.status === 'paid') {
           stopTimers()
@@ -53,13 +53,9 @@ export default function PayModal({ open, onClose, onPaid }: PayModalProps) {
 
     const init = async () => {
       try {
-        const res = await fetch('/api/pay', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount: AMOUNT }),
-        })
+        const res = await fetch('/api/pay/orders', { method: 'POST' })
         const data = await res.json()
-        if (data.error) throw new Error(data.error)
+        if (!res.ok || data.error) throw new Error(data.error || '创建订单失败')
 
         setOrderId(data.orderId)
         setQrSvg(data.qrSvg)
@@ -73,7 +69,7 @@ export default function PayModal({ open, onClose, onPaid }: PayModalProps) {
           })
         }, 1000)
 
-        if (data.wxConfigured) startPolling(data.orderId)
+        startPolling(data.orderId)
       } catch (err) {
         setError(err instanceof Error ? err.message : '创建订单失败')
         setStage('error')
@@ -142,22 +138,8 @@ export default function PayModal({ open, onClose, onPaid }: PayModalProps) {
               <span className="inline-flex items-center gap-1"><Clock size={11} />{fmtTime(countdown)}</span>
             </p>
 
-            {/* Manual confirm button */}
-            {!qrSvg ? (
-              <button
-                onClick={() => { stopTimers(); setStage('paid'); setTimeout(onPaid, 1000) }}
-                className="w-full h-11 flex items-center justify-center gap-2 bg-[var(--olive)] text-white font-bold rounded-xl hover:opacity-90 transition-opacity"
-              >
-                <Check size={17} /> 已完成支付，开始下载
-              </button>
-            ) : (
-              <button
-                onClick={() => startPolling(orderId)}
-                className="w-full h-9 text-[12px] text-[var(--ink-muted)] hover:text-[var(--ink)] transition-colors"
-              >
-                已付款？点此刷新
-              </button>
-            )}
+            <p className="text-[11px] text-[var(--ink-muted)] mb-3">当前支付方式需要使用电脑打开微信扫码。手机用户可先完成制作，再到电脑继续导出。</p>
+            <button onClick={() => startPolling(orderId)} className="w-full h-9 text-[12px] text-[var(--ink-muted)] hover:text-[var(--ink)] transition-colors">已付款？点此刷新</button>
           </>
         )}
 

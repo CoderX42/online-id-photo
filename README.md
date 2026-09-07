@@ -12,8 +12,8 @@
 | UI | Tailwind CSS v3 + 自定义 CSS |
 | 状态管理 | Zustand v5 |
 | 抠图 | `@imgly/background-removal` (WebGPU 优先，CPU 降级) |
-| 认证 | Supabase Auth（邮箱 OTP 免密登录） |
-| 数据库 | Supabase Postgres |
+| 订单 | 免登录 Neon Postgres 订单 |
+| 数据库 | Neon Postgres（订单与支付事件） |
 | 支付 | 微信支付 Native（Provider 抽象层，可插拔） |
 | 部署 | Vercel |
 | 测试 | Vitest |
@@ -39,9 +39,8 @@ npm start
 
 | 变量 | 说明 |
 |---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase 项目 URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase 匿名密钥 |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase 服务角色密钥（用于 webhook） |
+| `DATABASE_URL` | Neon Postgres 连接字符串 |
+| `NEXT_PUBLIC_SITE_URL` | 生产站点 URL，用于微信支付回调 |
 
 微信支付（可选）：
 
@@ -51,8 +50,11 @@ npm start
 | `WECHAT_API_V3_KEY` | API v3 密钥 |
 | `WECHAT_SERIAL_NO` | 证书序列号 |
 | `WECHAT_PRIVATE_KEY` | 商户私钥 |
+| `WECHAT_PLATFORM_PUBLIC_KEY` | 微信支付平台证书公钥，用于回调验签 |
+| `WECHAT_PLATFORM_SERIAL_NO` | 微信支付平台证书序列号 |
+| `WECHAT_NOTIFY_URL` | 可选，默认 `${NEXT_PUBLIC_SITE_URL}/api/pay/webhook` |
 
-未配置微信支付时，订单使用 ManualProvider 占位。
+支付订单固定为 ¥0.50/次，订单和支付事件写入 Neon Postgres。未配置数据库或微信支付凭据时，支付接口会返回配置错误，不会以手动确认方式发放导出权益。
 
 ## 功能
 
@@ -66,9 +68,7 @@ npm start
 - 5 寸、6 寸、A4 排版照，支持间距、页边距和裁切线
 - 浅色衣物保护算法（避免白衬衫被误切）
 - 最近导出信息记录（本地存储，不保存照片）
-- 邮箱 OTP 免密登录（Supabase Auth）
-- 用户仪表板：导出历史云同步、自定义尺寸收藏
-- 付费会员：高清导出、排版照、多尺寸 ZIP 打包
+- 免登录单次支付：¥0.50 解锁本次高清导出、排版照和多尺寸 ZIP
 
 ## 项目结构
 
@@ -81,7 +81,7 @@ src/
     sizes/page.tsx              尺寸大全 SEO 页
     login/page.tsx              邮箱 OTP 登录
     dashboard/page.tsx          用户中心
-    pay/page.tsx                会员支付页
+    pay/page.tsx                单次支付页
     api/                        Route Handlers
       auth/callback/            OAuth/OTP 回调
       auth/signout/             退出登录
@@ -94,9 +94,7 @@ src/
     imageUtils.ts               画布渲染、排版、衣物保护
     photoSizes.ts               证件照尺寸数据
     utils.ts                    cn() 工具
-    entitlements.ts             会员门控
     zipExport.ts                多尺寸 ZIP 打包
-    supabase/                   Supabase 客户端
     payment/                    支付 Provider 抽象
   features/studio/              工作室功能模块
     store.ts                    Zustand Store（替代 28 个 useState）
@@ -110,14 +108,12 @@ src/
 
 ## 数据库
 
-迁移文件位于 `supabase/migrations/001_init.sql`：
+订单迁移文件位于 `migrations/002_orders.sql`：
 
-- `export_records` — 导出记录（仅元数据，不含照片）
-- `custom_sizes` — 自定义尺寸收藏
-- `orders` — 订单记录
-- `entitlements` — 会员有效期
+- `orders` — 单次支付订单
+- `payment_events` — 微信支付回调幂等事件
 
-所有表启用 RLS，用户只能访问自己的数据。
+订单表通过订单号和微信回调幂等键保护，照片本身不写入数据库。
 
 ## 模型同步
 

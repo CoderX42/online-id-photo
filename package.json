@@ -11,10 +11,12 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "sync:model": "node scripts/sync-background-model.mjs"
+    "sync:model": "node scripts/sync-background-model.mjs",
+    "db:migrate": "node scripts/migrate-neon.mjs"
   },
   "dependencies": {
     "@imgly/background-removal": "^1.7.0",
+    "@neondatabase/serverless": "^1.1.0",
     "@next/swc-darwin-arm64": "^16.2.11",
     "clsx": "^2.1.1",
     "jszip": "^3.10.1",

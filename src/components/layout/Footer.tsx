@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation'
 import { LockKeyhole } from 'lucide-react'
+import Link from 'next/link'
 
 export default function Footer() {
   const pathname = usePathname()
@@ -21,6 +22,7 @@ export default function Footer() {
           照见
         </div>
         <span className="sm:ml-auto">让每一张证件照，都合规也好看。</span>
+        <Link href="/privacy" className="hover:text-[var(--terracotta)] transition-colors">隐私说明</Link>
         <span className="flex items-center gap-1.5 sm:ml-8 bg-[var(--olive-light)] text-[var(--olive)] px-3 py-1 rounded-full text-[11px] font-medium">
           <LockKeyhole size={13} />
           所有图像处理均在本地完成
