@@ -1,0 +1,5 @@
+# Replace idphoto.example.com with your domain.
+idphoto.example.com {
+  reverse_proxy 127.0.0.1:3000
+  encode zstd gzip
+}
